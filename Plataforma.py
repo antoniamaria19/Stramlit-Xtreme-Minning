@@ -1062,12 +1062,14 @@ with tab4:
                 try:
                     resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
                         file_path=".",
+                        df_tiempos=tiempos_aux,
+                        df_familia= productos_aux,
+                        df_prioridad= prioridades_aux,
                         file_name="temp_planificacion.xlsx",
                         fechas=[fecha_seleccionada],
                         turnos=[turno_seleccionado],
                         plants=PP,
                         time=T,
-                        df_tiempos=tiempos_aux
                     )
                     st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
