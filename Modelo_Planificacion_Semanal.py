@@ -48,7 +48,7 @@ def procesar_planificacion(file_path, file_name, fechas, turnos, df_tiempos):
     archivo_completo = os.path.join(file_path, file_name)
 
     # Cargar la planificación y filtrar por las fechas y turnos especificados
-    df_std_pl = pd.read_excel(archivo_completo, sheet_name='BD_Programa')
+    df_std_pl = pd.read_excel(archivo_completo, sheet_name='Sheet1')
     # Asegurarte de que 'Fecha' y 'fechas' sean del mismo tipo (datetime, por ejemplo)
     df_std_pl['Fecha'] = pd.to_datetime(df_std_pl['Fecha'], errors='coerce')  # Convertir 'Fecha' en el DataFrame
     fechas = pd.to_datetime(fechas, errors='coerce')  # Convertir 'fechas' a datetime
