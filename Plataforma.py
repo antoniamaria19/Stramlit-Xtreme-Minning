@@ -1016,6 +1016,19 @@ with tab3:
 with tab4:
     st.header("🎯 Optimización de Planificación")
     if planif_semanal is not None:
+        # Cargar archivos auxiliares
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        ruta_aux = os.path.join(script_dir, "Tablas_auxiliares_datos.xlsx")
+
+        if os.path.exists(ruta_aux):
+            df_aux = pd.ExcelFile(ruta_aux)
+            data_aux = pd.read_excel(df_aux, sheet_name="Datos")
+            conductores_df = pd.read_excel(df_aux, sheet_name="Conductores")
+            tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
+            productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
+            prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
+        else:
+            st.warning("No se encontró el archivo de datos auxiliares.")
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
@@ -1037,6 +1050,7 @@ with tab4:
                 (planif_semanal['Fecha'].dt.date == fecha_seleccionada)
                 & (planif_semanal['Turno'] == turno_seleccionado)
             ]
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 PP = st.number_input("Número de plantas disponibles:", min_value=1, value=2, step=1, key="PP")
@@ -1046,39 +1060,31 @@ with tab4:
             if data_filtrada.empty:
                 st.warning("No hay datos disponibles para la fecha y el turno seleccionados.")
             else:
-
                 st.info(f"**Parámetros seleccionados para optimización:** {fecha_seleccionada} - {turno_seleccionado} - {PP} planta(s)")
-                # Cargar archivos auxiliares
-                script_dir = os.path.dirname(os.path.abspath(__file__))
-                ruta_aux = os.path.join(script_dir, "Tablas_auxiliares_datos.xlsx")
 
-                if os.path.exists(ruta_aux):
-                    df_aux = pd.ExcelFile(ruta_aux)
-                    tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
-                    productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
-                    prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
-                else:
-                    st.warning("No se encontró el archivo de datos auxiliares.")
-                try:
-                    resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
-                        file_path=".",
-                        df_tiempos=tiempos_aux,
-                        df_familia= productos_aux,
-                        df_prioridad= prioridades_aux,
-                        file_name="temp_planificacion.xlsx",
-                        fechas=[fecha_seleccionada],
-                        turnos=[turno_seleccionado],
-                        plants=PP,
-                        time=T,
-                    )
-                    st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
+                # Botón para ejecutar la optimización
+                if st.button("Ejecutar Optimización"):
+                    try:
+                        # Ejecutar la planificación y obtener el resultado
+                        resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
+                            file_path=".",
+                            file_name="temp_planificacion.xlsx",
+                            df_tiempos= tiempos_aux,
+                            df_familia= productos_aux,
+                            df_prioridad= prioridades_aux,
+                            fechas=[fecha_seleccionada],
+                            turnos=[turno_seleccionado],
+                            plants=PP,
+                            time=T
+                        )
+                        st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
-                    # Guardar resultado en session_state
-                    st.session_state['resultado_optimizacion'] = resultado
-                    st.session_state['referencia_fecha'] = referencia_fecha
+                        # Guardar resultado en session_state
+                        st.session_state['resultado_optimizacion'] = resultado
+                        st.session_state['referencia_fecha'] = referencia_fecha
 
-                except Exception as e:
-                    st.error(f"❌ Error durante la optimización: {e}")
+                    except Exception as e:
+                        st.error(f"Error durante la optimización {e}")
 
         # Si hay un resultado en session_state, aplicar filtrado sin reiniciar
         if 'resultado_optimizacion' in st.session_state:
