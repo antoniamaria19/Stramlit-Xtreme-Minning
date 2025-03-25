@@ -524,7 +524,7 @@ def crear_dataframe_resultados(df_resultado, df_resultados_camiones):
 
     return df_merged
 
-def ejecutar_proceso_planificacion(file_path, file_name, fechas, turnos,plants,time,df_tiempos):
+def ejecutar_proceso_planificacion(file_path, file_name, df_tiempos, df_familia, df_prioridad, fechas, turnos,plants,time):
     """
     Función que ejecuta todo el flujo de planificación: cargar datos, procesar, optimizar
     y obtener los resultados.
@@ -539,7 +539,7 @@ def ejecutar_proceso_planificacion(file_path, file_name, fechas, turnos,plants,t
     - df_merged (pd.DataFrame): DataFrame final con los resultados procesados y optimizados.
     """
     # Paso 1: Cargar archivos de planificación
-    df_resultado = procesar_planificacion(file_path, file_name, fechas, turnos, df_tiempos)
+    df_resultado = procesar_planificacion(file_path, file_name, df_tiempos, df_familia, df_prioridad, fechas, turnos)
 
     #status, model, df_resultados_camiones = optimizar_planificacion_semanal(df_resultado, time, plants, K=20)
     status, model, df_resultados_camiones,solve_time = optimizar_planificacion_semanal_ortools(df_resultado, time, plants, K=20)
