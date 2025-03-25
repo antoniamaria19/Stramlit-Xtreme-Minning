@@ -30,7 +30,7 @@ pd.set_option('display.max_rows', None)
 # In[3]:
 
 
-def procesar_planificacion(file_path, file_name, fechas, turnos, df_tiempos):
+def procesar_planificacion(file_path, file_name, df_tiempos, df_familia, df_prioridad, fechas, turnos):
     """
     Procesa un archivo de planificación, duplicando filas según la cantidad de camiones y calculando campos necesarios.
 
@@ -124,8 +124,8 @@ def procesar_planificacion(file_path, file_name, fechas, turnos, df_tiempos):
     # Función para duplicar las filas por la cantidad de camiones
 
     # Cargar datos auxiliares
-    df_familia = pd.read_excel(archivo_completo, sheet_name='Productos')
-    df_prioridad = pd.read_excel(archivo_completo, sheet_name='Prioridades')
+    #df_familia = pd.read_excel(archivo_completo, sheet_name='Productos')
+    #df_prioridad = pd.read_excel(archivo_completo, sheet_name='Prioridades')
 
     #2. Familia de prododucto 
     # Merge con la tabla de productos para obtener la familia
