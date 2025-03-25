@@ -123,6 +123,8 @@ with tab1:
                 tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
                 productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
                 prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
+                st.session_state['MIXERS'] = data_aux['MIXER'].dropna().unique().tolist()
+                st.session_state['CONDUCTORES'] = conductores_df['CONDUCTOR'].dropna().unique().tolist()
             else:
                 st.warning("No se encontró el archivo de datos auxiliares.")
 
@@ -780,12 +782,11 @@ with tab3:
                 edited_df_mixer = st.data_editor(
                     df_mixer,
                     column_config={
-                        "MIXER": st.column_config.SelectboxColumn("MIXER", options=MIXERS),
-                        "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=CONDUCTORES)
+                        "MIXER": st.column_config.SelectboxColumn("MIXER", options=st.session_state.get('MIXERS', [])),
+                        "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=st.session_state.get('CONDUCTORES', []))
                     },
                     use_container_width=True
                 )
-
                 df_mixer.update(edited_df_mixer)
 
                 # Verificar duplicados (ignorando valores vacíos)
