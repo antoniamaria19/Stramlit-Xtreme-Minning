@@ -1050,25 +1050,22 @@ with tab4:
 
                 # Botón para ejecutar la optimización
                 if st.button("Ejecutar Optimización"):
-                    try:
-                        # Ejecutar la planificación y obtener el resultado
-                        resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
-                            file_path=".",
-                            file_name="temp_planificacion.xlsx",
-                            fechas=[fecha_seleccionada],
-                            turnos=[turno_seleccionado],
-                            plants=PP,
-                            time=T,
-                            df_tiempos=tiempos_aux
-                        )
-                        st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
+                    # Ejecutar la planificación y obtener el resultado
+                    resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
+                        file_path=".",
+                        file_name="temp_planificacion.xlsx",
+                        fechas=[fecha_seleccionada],
+                        turnos=[turno_seleccionado],
+                        plants=PP,
+                        time=T,
+                        df_tiempos=tiempos_aux
+                    )
+                    st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
-                        # Guardar resultado en session_state
-                        st.session_state['resultado_optimizacion'] = resultado
-                        st.session_state['referencia_fecha'] = referencia_fecha
+                    # Guardar resultado en session_state
+                    st.session_state['resultado_optimizacion'] = resultado
+                    st.session_state['referencia_fecha'] = referencia_fecha
 
-                    except Exception as e:
-                        st.error(f"Error durante la optimización {e}")
 
         # Si hay un resultado en session_state, aplicar filtrado sin reiniciar
         if 'resultado_optimizacion' in st.session_state:
