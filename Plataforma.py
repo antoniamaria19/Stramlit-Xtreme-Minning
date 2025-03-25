@@ -33,6 +33,8 @@ planif_semanal = None
 data_aux = None
 conductores_df = None
 tiempos_aux = None
+productos_aux = None
+prioridades_aux = None
 
 def calcular_num_camiones(df_std):
     df_std = df_std.copy()
@@ -123,6 +125,7 @@ with tab1:
                 tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
                 productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
                 prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
+                #  Guardar en session_state para uso seguro en otras pestañas
                 st.session_state['MIXERS'] = data_aux['MIXER'].dropna().unique().tolist()
                 st.session_state['CONDUCTORES'] = conductores_df['CONDUCTOR'].dropna().unique().tolist()
             else:
@@ -765,29 +768,25 @@ with tab3:
             col1, col2 = st.columns([1.5, 2])  
             with col1:
                 st.subheader("Asignación de mixers y conductores")
-                #Opciones par tabla mixer-conductor
-                N = 21
-                if data_aux is not None:
-                    MIXERS = data_aux['MIXER'].unique().tolist()
-                if conductores_df is not None:
-                    CONDUCTORES = conductores_df['CONDUCTOR'].tolist()
-                # Crear DataFrame con el número de camiones seleccionado
-                df_mixer = pd.DataFrame({
-                    "Camion_ID": list(range(N)),  # ID de camión consecutivo
-                    "MIXER": [""] * N,  # Valor por defecto en MIXER
-                    "CONDUCTOR": [""] * N  # Valor por defecto en CONDUCTOR
-                })
+                # Solo inicializar si hay datos
+                if 'MIXERS' in st.session_state and 'CONDUCTORES' in st.session_state:
+                    N = 21  # o el número de camiones que quieras mostrar
+                    df_mixer = pd.DataFrame({
+                        "Camion_ID": list(range(N)),
+                        "MIXER": [""] * N,
+                        "CONDUCTOR": [""] * N
+                    })
 
-                # Usar st.data_editor para edición interactiva
-                edited_df_mixer = st.data_editor(
-                    df_mixer,
-                    column_config={
-                        "MIXER": st.column_config.SelectboxColumn("MIXER", options=st.session_state.get('MIXERS', [])),
-                        "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=st.session_state.get('CONDUCTORES', []))
-                    },
-                    use_container_width=True
-                )
-                df_mixer.update(edited_df_mixer)
+                    edited_df_mixer = st.data_editor(
+                        df_mixer,
+                        column_config={
+                            "MIXER": st.column_config.SelectboxColumn("MIXER", options=st.session_state.get('MIXERS', [])),
+                            "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=st.session_state.get('CONDUCTORES', []))
+                        },
+                        use_container_width=True
+                    )
+
+                    df_mixer.update(edited_df_mixer)
 
                 # Verificar duplicados (ignorando valores vacíos)
                 mixers_validos = df_mixer["MIXER"].replace("", None).dropna()
@@ -1017,19 +1016,7 @@ with tab3:
 with tab4:
     st.header("🎯 Optimización de Planificación")
     if planif_semanal is not None:
-        # Cargar archivos auxiliares
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        ruta_aux = os.path.join(script_dir, "Tablas_auxiliares_datos.xlsx")
 
-        if os.path.exists(ruta_aux):
-            df_aux = pd.ExcelFile(ruta_aux)
-            data_aux = pd.read_excel(df_aux, sheet_name="Datos")
-            conductores_df = pd.read_excel(df_aux, sheet_name="Conductores")
-            tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
-            productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
-            prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
-        else:
-            st.warning("No se encontró el archivo de datos auxiliares.")
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
