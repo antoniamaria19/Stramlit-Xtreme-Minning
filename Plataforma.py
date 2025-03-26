@@ -17,6 +17,7 @@ import Modelo_Planificacion_Semanal as mps
 import Modelo_Planificacion_Heuristica_Diaria as HD
 from datetime import datetime
 import os
+import pytz
 
 # Configuración de la página
 st.set_page_config(
