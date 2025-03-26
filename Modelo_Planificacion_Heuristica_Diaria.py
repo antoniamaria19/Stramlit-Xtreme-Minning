@@ -450,7 +450,7 @@ def optimizar_secuenciamiento_camiones_ortools(df_resultado, tiempo_actual_str, 
     M = 10000
     C = np.append(df_resultado['Hora_requerido_heuristica_min'].values, 
                   [nodos_almuerzo[i]['hora_referencia'] for i in A])  # Almuerzo centrado en 300 minutos
-    col = df_resultado['Hora_retorno_proyectado_min'].fillna(0)
+    col = col = df_resultado['Hora_retorno_proyectado_min'].fillna(0).astype(int)
     col = col.infer_objects(copy=False)  # infiere el tipo antes de convertir
     R = np.append(col.astype(int).values, [0 for i in A]) # No tiene retorno proyectado
     b = {i: 0 for i in nodos} # Variable auxiliar para desactivar restricción phi[i] cuando se ingresan llegadas proyectadas  
