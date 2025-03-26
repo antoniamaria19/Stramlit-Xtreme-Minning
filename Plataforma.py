@@ -479,6 +479,10 @@ with tab2:
                 planif_diaria['Hora_llamado'] = pd.to_datetime(
                     planif_diaria['Hora_llamado'], format='%H:%M'
                 ).dt.strftime('%H:%M')  # Convertir de vuelta a texto en formato 'HH:MM'
+                
+                planif_diaria['Hora_retorno_proyectado'] = pd.to_datetime(
+                    planif_diaria['Hora_retorno_proyectado'], format='%H:%M'
+                ).dt.strftime('%H:%M')  # Convertir de vuelta a texto en formato 'HH:MM'
 
             except ValueError:
                 st.error("Por favor, verifique el formato de las horas ingresadas (HH:MM).")
@@ -947,12 +951,27 @@ with tab3:
                     use_container_width=True
                 )
 
-                # Guardar cambios al actualizar
+                # Validación opcional: asegurarse que tenga formato HH:MM
+                def validar_hora(hora_str):
+                    try:
+                        pd.to_datetime(hora_str, format='%H:%M')
+                        return True
+                    except:
+                        return False
+                errores = []
+                for col in ['Hora_Carga_R', 'Hora_Llegada_Planta_R', 'Hora_Retorno_R']:
+                    errores += df_editado[~df_editado[col].apply(validar_hora)][col].index.tolist()
+
+                if errores:
+                    st.warning("Algunas celdas de ingreso de horas tienen formato inválido. Use HH:MM (por ejemplo, 14:30).")
+                    st.stop()
+
                 if st.button("Guardar cambios"):
                     st.session_state['df_horarios_reales'].update(df_editado)
-                    st.session_state["actualizar_kpis"] = True  # Forzar recarga de subtab3
+                    st.session_state["actualizar_kpis"] = True
                     st.success("Horarios reales actualizados ✅")
                     st.info("En la siguiente subpestaña encontrará sus métricas de desempeño 📈")
+
 
                 # Función para exportar a Excel
                 def to_excel(df):
