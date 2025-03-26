@@ -33,6 +33,8 @@ planif_semanal = None
 data_aux = None
 conductores_df = None
 tiempos_aux = None
+productos_aux = None
+prioridades_aux = None
 
 def calcular_num_camiones(df_std):
     df_std = df_std.copy()
@@ -123,6 +125,9 @@ with tab1:
                 tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
                 productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
                 prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
+                #  Guardar en session_state para uso seguro en otras pestañas
+                st.session_state['MIXERS'] = data_aux['MIXER'].dropna().unique().tolist()
+                st.session_state['CONDUCTORES'] = conductores_df['CONDUCTOR'].dropna().unique().tolist()
             else:
                 st.warning("No se encontró el archivo de datos auxiliares.")
 
@@ -277,7 +282,7 @@ with tab1:
                     # Mostrar gráfico en Streamlit
                     st.pyplot(fig)
 
-            columnas_mostrar = ['Fecha', 'Turno', 'Empresa', 'Código Producto', 'Volumen Total [m3]', 'Nro_camiones', 'Punto de Entrega', 'Destino Final' ]
+            columnas_mostrar = ['Fecha', 'Turno', 'Empresa', 'Codigo Producto', 'Volumen Total [m3]', 'Nro_camiones', 'Punto de Entrega', 'Destino Final' ]
             st.markdown("<h3 style='font-size:20px;'> Detalle de los Pedidos</h3>", unsafe_allow_html=True)
             st.dataframe(data_filtrada[columnas_mostrar], use_container_width=True)
 
@@ -474,6 +479,10 @@ with tab2:
                     planif_diaria['Hora_llamado'], format='%H:%M'
                 ).dt.strftime('%H:%M')  # Convertir de vuelta a texto en formato 'HH:MM'
 
+                planif_diaria['Hora_retorno_proyectado'] = pd.to_datetime(
+                    planif_diaria['Hora_retorno_proyectado'], format='%H:%M'
+                ).dt.strftime('%H:%M')  # Convertir de vuelta a texto en formato 'HH:MM'
+                
             except ValueError:
                 st.error("Por favor, verifique el formato de las horas ingresadas (HH:MM).")
                 st.stop()
@@ -553,9 +562,7 @@ with tab2:
                     st.error("Por favor, confirme los pedidos antes de optimizar.")
                 else:
                     # Obtener la hora actual del sistema y formatearla a "HH:MM"
-                    chile_tz = pytz.timezone('America/Santiago')
-                    tiempo_actual_str = datetime.now(chile_tz).strftime("%H:%M")
-                    #st.write("Hora de ejecución:", tiempo_actual_str)
+                    tiempo_actual_str = datetime.now().strftime("%H:%M")
                     try:
                         # Llamar a la función de optimización con parámetros ingresados
                         st.metric(label = "Hora de la ejecución", value = tiempo_actual_str)
@@ -765,30 +772,25 @@ with tab3:
             col1, col2 = st.columns([1.5, 2])  
             with col1:
                 st.subheader("Asignación de mixers y conductores")
-                #Opciones par tabla mixer-conductor
-                N = 21
-                if data_aux is not None:
-                    MIXERS = data_aux['MIXER'].unique().tolist()
-                if conductores_df is not None:
-                    CONDUCTORES = conductores_df['CONDUCTOR'].tolist()
-                # Crear DataFrame con el número de camiones seleccionado
-                df_mixer = pd.DataFrame({
-                    "Camion_ID": list(range(N)),  # ID de camión consecutivo
-                    "MIXER": [""] * N,  # Valor por defecto en MIXER
-                    "CONDUCTOR": [""] * N  # Valor por defecto en CONDUCTOR
-                })
+                # Solo inicializar si hay datos
+                if 'MIXERS' in st.session_state and 'CONDUCTORES' in st.session_state:
+                    N = 21  # o el número de camiones que quieras mostrar
+                    df_mixer = pd.DataFrame({
+                        "Camion_ID": list(range(N)),
+                        "MIXER": [""] * N,
+                        "CONDUCTOR": [""] * N
+                    })
 
-                # Usar st.data_editor para edición interactiva
-                edited_df_mixer = st.data_editor(
-                    df_mixer,
-                    column_config={
-                        "MIXER": st.column_config.SelectboxColumn("MIXER", options=MIXERS),
-                        "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=CONDUCTORES)
-                    },
-                    use_container_width=True
-                )
+                    edited_df_mixer = st.data_editor(
+                        df_mixer,
+                        column_config={
+                            "MIXER": st.column_config.SelectboxColumn("MIXER", options=st.session_state.get('MIXERS', [])),
+                            "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=st.session_state.get('CONDUCTORES', []))
+                        },
+                        use_container_width=True
+                    )
 
-                df_mixer.update(edited_df_mixer)
+                    df_mixer.update(edited_df_mixer)
 
                 # Verificar duplicados (ignorando valores vacíos)
                 mixers_validos = df_mixer["MIXER"].replace("", None).dropna()
@@ -947,10 +949,24 @@ with tab3:
                     use_container_width=True
                 )
 
-                # Guardar cambios al actualizar
+                # Validación opcional: asegurarse que tenga formato HH:MM
+                def validar_hora(hora_str):
+                    try:
+                        pd.to_datetime(hora_str, format='%H:%M')
+                        return True
+                    except:
+                        return False
+                errores = []
+                for col in ['Hora_Carga_R', 'Hora_Llegada_Planta_R', 'Hora_Retorno_R']:
+                    errores += df_editado[~df_editado[col].apply(validar_hora)][col].index.tolist()
+
+                if errores:
+                    st.warning("Algunas celdas de ingreso de horas tienen formato inválido. Use HH:MM (por ejemplo, 14:30).")
+                    st.stop()
+
                 if st.button("Guardar cambios"):
                     st.session_state['df_horarios_reales'].update(df_editado)
-                    st.session_state["actualizar_kpis"] = True  # Forzar recarga de subtab3
+                    st.session_state["actualizar_kpis"] = True
                     st.success("Horarios reales actualizados ✅")
                     st.info("En la siguiente subpestaña encontrará sus métricas de desempeño 📈")
 
@@ -1018,6 +1034,7 @@ with tab3:
 with tab4:
     st.header("🎯 Optimización de Planificación")
     if planif_semanal is not None:
+
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
@@ -1039,6 +1056,7 @@ with tab4:
                 (planif_semanal['Fecha'].dt.date == fecha_seleccionada)
                 & (planif_semanal['Turno'] == turno_seleccionado)
             ]
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 PP = st.number_input("Número de plantas disponibles:", min_value=1, value=2, step=1, key="PP")
@@ -1057,11 +1075,13 @@ with tab4:
                         resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
                             file_path=".",
                             file_name="temp_planificacion.xlsx",
+                            df_tiempos= tiempos_aux,
+                            df_familia= productos_aux,
+                            df_prioridad= prioridades_aux,
                             fechas=[fecha_seleccionada],
                             turnos=[turno_seleccionado],
                             plants=PP,
-                            time=T,
-                            df_tiempos=tiempos_aux
+                            time=T
                         )
                         st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
