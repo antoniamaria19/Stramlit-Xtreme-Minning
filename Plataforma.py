@@ -17,6 +17,7 @@ import Modelo_Planificacion_Semanal as mps
 import Modelo_Planificacion_Heuristica_Diaria as HD
 from datetime import datetime
 import os
+import pytz
 
 # Configuración de la página
 st.set_page_config(
@@ -557,8 +558,9 @@ with tab2:
                 if 'df_heur' not in st.session_state:
                     st.error("Por favor, confirme los pedidos antes de optimizar.")
                 else:
-                    # Obtener la hora actual del sistema y formatearla a "HH:MM"
-                    tiempo_actual_str = datetime.now().strftime("%H:%M")
+                    chile_tz = pytz.timezone('America/Santiago')
+                    tiempo_actual_str = datetime.now(chile_tz).strftime("%H:%M")
+                    st.write("Hora de ejecución:", tiempo_actual_str)
                     try:
                         # Llamar a la función de optimización con parámetros ingresados
                         st.metric(label = "Hora de la ejecución", value = tiempo_actual_str)
