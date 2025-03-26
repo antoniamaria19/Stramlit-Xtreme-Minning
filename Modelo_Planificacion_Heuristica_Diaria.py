@@ -541,9 +541,9 @@ def optimizar_secuenciamiento_camiones_ortools(df_resultado, tiempo_actual_str, 
         elif Prioridad[i] == 'MEDIA':  # Si la prioridad es MEDIA, limitar ru[i] y rl[i] a 20
             model_h.Add(ru[i] <= 20)
             model_h.Add(rl[i] <= 20)
-        elif Prioridad[i] == 'BAJA':  # Si la prioridad es MEDIA, limitar ru[i] y rl[i] a 20
-            model_h.Add(ru[i] <= 60)
-            model_h.Add(rl[i] <= 60)
+        #elif Prioridad[i] == 'BAJA':  # Si la prioridad es BAJA, limitar ru[i] y rl[i] a 60
+            #model_h.Add(ru[i] <= 60)
+            #model_h.Add(rl[i] <= 60)
 
         if not np.isnan(C_t_old[i]) and C_t_old[i] <= tiempo_actual + 45:
             model_h.Add(C_t[i] == C_t_old[i])  # Fijar C_t[i] al valor anterior
