@@ -9,6 +9,8 @@ from matplotlib.patches import Patch
 import matplotlib.dates as mdates
 import seaborn as sns
 from tabulate import tabulate
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 #--------------------------------------------------------------------------------------------------------------------
 def calcular_num_camiones(df_std):
     df_std = df_std.copy()
