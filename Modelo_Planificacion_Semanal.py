@@ -15,7 +15,8 @@ import time
 import Funciones as f
 import streamlit as st
 #from gurobipy import *
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # In[2]:
 

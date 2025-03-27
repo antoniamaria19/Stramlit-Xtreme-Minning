@@ -21,7 +21,8 @@ import time
 #from gurobipy import *
 import streamlit as st 
 
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # In[2]:
 
@@ -270,10 +271,9 @@ def procesar_planificacion_iterada(df_resultado):
     # Asegurar que 'Hora_requerido_heuristica' sea cadena, limpiar espacios y reemplazar NaN por cadena vacía
     df_heur['Hora_requerida'] = df_heur['Hora_requerida'].astype(str).str.strip().replace("nan", "")
     df_iterado['Hora_requerida'] = df_iterado['Hora_requerida'].astype(str).str.strip().replace("nan", "")
-    #df_heur['Hora_retorno_proyectado'] = df_heur['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", "")
-    #df_iterado['Hora_retorno_proyectado'] = df_iterado['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", "")
-    df_heur['Hora_retorno_proyectado'] = df_heur['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", 0)
-    df_iterado['Hora_retorno_proyectado'] = df_iterado['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", 0)
+    df_heur['Hora_retorno_proyectado'] = df_heur['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", "")
+    df_iterado['Hora_retorno_proyectado'] = df_iterado['Hora_retorno_proyectado'].astype(str).str.strip().replace("nan", "")
+
 
         # Función para convertir horas a minutos considerando turnos
     def convertir_a_minutos_turno(hora, turno):
@@ -450,8 +450,8 @@ def optimizar_secuenciamiento_camiones_ortools(df_resultado, tiempo_actual_str, 
     M = 10000
     C = np.append(df_resultado['Hora_requerido_heuristica_min'].values, 
                   [nodos_almuerzo[i]['hora_referencia'] for i in A])  # Almuerzo centrado en 300 minutos
-    col = col = df_resultado['Hora_retorno_proyectado_min'].fillna(0).astype(int)
-    col = col.infer_objects(copy=False)  # infiere el tipo antes de convertir
+    col = df_resultado['Hora_retorno_proyectado_min'].fillna(0).infer_objects(copy=False).astype(int)
+    #col = col.infer_objects(copy=False)  # infiere el tipo antes de convertir
     R = np.append(col.astype(int).values, [0 for i in A]) # No tiene retorno proyectado
     b = {i: 0 for i in nodos} # Variable auxiliar para desactivar restricción phi[i] cuando se ingresan llegadas proyectadas  
     
@@ -540,10 +540,7 @@ def optimizar_secuenciamiento_camiones_ortools(df_resultado, tiempo_actual_str, 
             model_h.Add(rl[i] == 0)
         elif Prioridad[i] == 'MEDIA':  # Si la prioridad es MEDIA, limitar ru[i] y rl[i] a 20
             model_h.Add(ru[i] <= 20)
-            model_h.Add(rl[i] <= 20)
-        #elif Prioridad[i] == 'BAJA':  # Si la prioridad es BAJA, limitar ru[i] y rl[i] a 60
-            #model_h.Add(ru[i] <= 60)
-            #model_h.Add(rl[i] <= 60)
+            model_h.Add(rl[i] <= 45)
 
         if not np.isnan(C_t_old[i]) and C_t_old[i] <= tiempo_actual + 45:
             model_h.Add(C_t[i] == C_t_old[i])  # Fijar C_t[i] al valor anterior
