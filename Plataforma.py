@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,11 +12,14 @@ import sys
 import xlsxwriter
 #importaciones codigos 
 import Funciones as f
+#importaciones codigos 
+import Funciones as f
 import Modelo_Planificacion_Semanal as mps 
 import Modelo_Planificacion_Heuristica_Diaria as HD
 from datetime import datetime
 import os
-import pytz
+from datetime import time
+
 
 # Configuración de la página
 st.set_page_config(
@@ -36,6 +38,7 @@ conductores_df = None
 tiempos_aux = None
 productos_aux = None
 prioridades_aux = None
+mixer_df = None
 
 def calcular_num_camiones(df_std):
     df_std = df_std.copy()
@@ -51,8 +54,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🎯 Optimización de Planificación"
 ])
 
-
-#VISUALIZACION DATOS PLANIFICACION
+# VISUALIZACIÓN DATOS PLANIFICACIÓN
 with tab1:
     st.header("📊 Programa semanal")
 
@@ -72,23 +74,31 @@ with tab1:
         col1, col2 = st.columns([6, 0.2])  # file_uploader a la izquierda, botón eliminar a la derecha
 
         with col1:
+            # Inicializar clave si no existe
+            if f"archivo_{i}" not in st.session_state:
+                st.session_state[f"archivo_{i}"] = None
+
             uploaded_file = st.file_uploader(f"Archivo Excel {i+1}", type=["xlsx"], key=f"file_uploader_{i}")
-            if uploaded_file:
+
+            if uploaded_file is not None:
+                st.session_state[f"archivo_{i}"] = uploaded_file
+
+            # Usar archivo desde session_state
+            if st.session_state[f"archivo_{i}"] is not None:
                 try:
-                    df = pd.read_excel(uploaded_file, sheet_name="BD_Programa")
-                    df['Archivo_Origen'] = uploaded_file.name  # opcional
+                    df = pd.read_excel(st.session_state[f"archivo_{i}"], sheet_name="BD_Programa")
+                    df['Archivo_Origen'] = st.session_state[f"archivo_{i}"].name
                     dfs_planificacion.append(df)
+                    #st.success(f"Archivo cargado: {st.session_state[f'archivo_{i}'].name}")
                 except Exception as e:
-                    st.error(f"Error al procesar el archivo {uploaded_file.name}: {e}")
+                    st.error(f"Error al procesar el archivo {st.session_state[f'archivo_{i}'].name}: {e}")
 
         with col2:
             eliminar = st.button("🗑️", key=f"eliminar_{i}")
             if eliminar:
                 st.session_state['uploaded_files'].pop(i)
-                # Recargar la página para evitar inconsistencias
+                st.session_state.pop(f"archivo_{i}", None)
                 st.rerun()
-
-
 
     # Validar si se cargó al menos un archivo
     if dfs_planificacion:
@@ -117,28 +127,29 @@ with tab1:
 
             # Cargar archivos auxiliares
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            ruta_aux = os.path.join(script_dir, "Tablas_auxiliares_datos.xlsx")
+            ruta_aux = os.path.join(script_dir, "Tablas_aux_datos.xlsx")
 
             if os.path.exists(ruta_aux):
                 df_aux = pd.ExcelFile(ruta_aux)
                 data_aux = pd.read_excel(df_aux, sheet_name="Datos")
                 conductores_df = pd.read_excel(df_aux, sheet_name="Conductores")
+                mixer_df = pd.read_excel(df_aux, sheet_name="Mixers")
                 tiempos_aux = pd.read_excel(df_aux, sheet_name="Tiempos")
                 productos_aux = pd.read_excel(df_aux, sheet_name="Productos")
                 prioridades_aux = pd.read_excel(df_aux, sheet_name="Prioridades")
-                #  Guardar en session_state para uso seguro en otras pestañas
-                st.session_state['MIXERS'] = data_aux['MIXER'].dropna().unique().tolist()
+
+                # Guardar en session_state para uso en otras pestañas
+                st.session_state['MIXERS'] = mixer_df['MIXER'].dropna().unique().tolist()
                 st.session_state['CONDUCTORES'] = conductores_df['CONDUCTOR'].dropna().unique().tolist()
             else:
                 st.warning("No se encontró el archivo de datos auxiliares.")
 
-            # Confirmación visual
             st.success("Archivos cargados y procesados exitosamente.")
 
             dashboard_data = planif_semanal.copy()
 
             if dashboard_data is not None:
-                # Mostrar rango de semana
+                # Rango de semana al centro
                 fecha_min = dashboard_data['Fecha'].min().strftime('%d-%m-%Y')
                 fecha_max = dashboard_data['Fecha'].max().strftime('%d-%m-%Y')
                 st.markdown(
@@ -149,7 +160,9 @@ with tab1:
                     """,
                     unsafe_allow_html=True
                 )
-                            #st.write(sys.executable) #en que entorno se corre
+                
+                
+                #st.write(sys.executable) #en que entorno se corre
                 
                 # Filtros globales arriba
                 #st.subheader("Filtros")
@@ -306,10 +319,9 @@ with tab1:
             f.generar_resumen_semanal(data_filtrada2)
             #f.generar_resumen_semanal(planif_semanal)
         except Exception as e:
-            st.error(f"Error general al procesar los archivos: {e}")
+            st.error(f"Error al procesar el archivo: {e}")
     else:
-        st.info("Por favor, agregue al menos un archivo Excel para continuar.")
-
+        st.info("Por favor, suba un archivo Excel para continuar.") 
 
 
 # Pestaña de planificación diaria
@@ -320,9 +332,10 @@ with tab2:
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
+            fechas_ordenadas = sorted(planif_semanal['Fecha'].dt.date.unique())
             fecha_seleccionada = st.selectbox(
                 "Seleccione una fecha",
-                planif_semanal['Fecha'].dt.date.unique(),
+                fechas_ordenadas,
                 key="fecha_tab1"
             )
         st.session_state['fecha_seleccionada'] = fecha_seleccionada
@@ -383,7 +396,6 @@ with tab2:
                 planif_diaria['ID'] = range(1, len(planif_diaria) + 1)
 
                 st.success("Archivo Excel cargado correctamente. Puede continuar editando.")
-                
             else:
                 # Generar planificación desde cero si no se sube archivo
                 planif_diaria = HD.procesar_planificacion_inicial(
@@ -401,12 +413,12 @@ with tab2:
             #st.dataframe(planif_diaria)
             # Seleccionar columnas para la tabla editable
             editable_columns = [
-                'ID', 'Fecha', 'Turno', 'Pedido_ID','Empresa', 'Hora_llamado', 'Hora_requerida', 
-                'Volumen_confirmado', 'Volumen_transportado', 'Volumen_m3', 
-                'Punto_entrega', 'Destino_final', 'Codigo_producto', 'Familia', 'Prioridad',
-                'Llegada_obra_min', 'Atencion_min', 'Retorno_min', 'Lavado_min','Descripcion',
-                'Obra','Uso', 'Observaciones','Hora_retorno_proyectado'
+                'ID', 'Pedido_ID','Empresa', 'Hora_llamado', 'Hora_requerida','Volumen_confirmado', 
+                'Prioridad', 'Hora_retorno_proyectado', 'Volumen_transportado', 'Punto_entrega', 'Destino_final',
+                'Codigo_producto', 'Familia','Llegada_obra_min', 'Atencion_min', 'Retorno_min',
+                'Lavado_min','Descripcion','Obra','Uso', 'Volumen_m3',  'Fecha', 'Turno', 'Observaciones'
                 ]
+            
 
             # Filtrar solo las columnas relevantes
             editable_df = planif_diaria[editable_columns]
@@ -483,7 +495,7 @@ with tab2:
                 planif_diaria['Hora_retorno_proyectado'] = pd.to_datetime(
                     planif_diaria['Hora_retorno_proyectado'], format='%H:%M'
                 ).dt.strftime('%H:%M')  # Convertir de vuelta a texto en formato 'HH:MM'
-                
+
             except ValueError:
                 st.error("Por favor, verifique el formato de las horas ingresadas (HH:MM).")
                 st.stop()
@@ -504,7 +516,6 @@ with tab2:
             # Guardar df_heur en session_state
             st.session_state['df_heur'] = df_heur
             st.session_state['df_iterado'] = df_iterado
-
 
             
             # Mostrar los resultados
@@ -542,29 +553,38 @@ with tab2:
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )  
             # Entrada para parámetros de optimización
-            st.subheader("Parámetros para la optimización")
-            col1,col2,col3 = st.columns(3)
-            with col1: 
-                time_limit = st.number_input("Límite de tiempo (en segundos):", min_value=10, value=120, step=10, key="time_limit")
-            with col2: 
-                K = st.number_input("Número de camiones a utilizar:", min_value=1, value=20, step=1, key="K")
-            with col3: 
-                P = st.number_input("Número de plantas disponibles:", min_value=1, value=2, step=1, key="P")
+            with st.container():
+                st.markdown("""
+                <div style="background-color: #f9f9f9; padding: 15px 20px 10px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h4 style="color: #222; text-align: center; margin: 0;"> Parámetros para la optimización</h4>
+                """, unsafe_allow_html=True)
 
-            # Botón para ejecutar la optimización
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    time_limit = st.number_input("⏱️ Tiempo límite (seg)", min_value=10, value=120, step=10)
+                    P = st.number_input("🏭 Plantas disponibles", min_value=1, value=2, step=1)
+                with col2:
+                    K = st.number_input("🚚 Camiones a utilizar", min_value=1, value=20, step=1)
+                    hora_usuario = st.time_input("🕒 Hora de la ejecución", value=time(0, 0), step=60)
+
+                st.markdown("</div>", unsafe_allow_html=True)  # Cierra el contenedor estilizado
+
 
             # Inicializar la variable global de optimización si no existe
             if 'optimizacion_pendiente' not in st.session_state:
                 st.session_state['optimizacion_pendiente'] = False
 
-            ejecutar_optimizacion = st.button("Optimizar planificación")
+
+            # Botón de ejecución
+            ejecutar_optimizacion = st.button("🚀 Optimizar planificación")
+
             if ejecutar_optimizacion:
                 if 'df_heur' not in st.session_state:
                     st.error("Por favor, confirme los pedidos antes de optimizar.")
                 else:
-                    # Obtener la hora actual del sistema y formatearla a "HH:MM"
-                    chile_tz = pytz.timezone('America/Santiago')
-                    tiempo_actual_str = datetime.now(chile_tz).strftime("%H:%M")
+                    # Convertir la hora seleccionada a string en formato "HH:MM"
+                    tiempo_actual_str = hora_usuario.strftime("%H:%M")
                     try:
                         # Llamar a la función de optimización con parámetros ingresados
                         st.metric(label = "Hora de la ejecución", value = tiempo_actual_str)
@@ -582,15 +602,32 @@ with tab2:
 
                             # Mostrar el tiempo de resolución y el dataframe
                             st.metric(label="Tiempo de resolución (segundos)", value=round(solve_time, 2))
-                            #st.dataframe(df_final)
+                            st.dataframe(df_final)
 
                             # Guardar df_final en session_state
                             st.session_state['df_final'] = df_final
 
                             # **Activar el flag global de optimización pendiente**
                             st.session_state['optimizacion_pendiente'] = True  
+
+                            # Crear nuevo df_horarios_reales conservando horas reales si existen
+                            df_nuevo = df_final.copy()
+                            columnas_horas = ['Hora_Carga_R', 'Hora_Llegada_Planta_R', 'Hora_Retorno_R']
+
+                            if 'df_horarios_reales' in st.session_state:
+                                # Tomar columnas de horas reales previas
+                                df_prev = st.session_state['df_horarios_reales'][['Pedido_ID', 'Viaje_ID'] + columnas_horas]
+                                # Hacer merge para conservar horas reales donde coincidan Pedido_ID y Viaje_ID
+                                df_nuevo = df_nuevo.merge(df_prev, on=['Pedido_ID', 'Viaje_ID'], how='left')
+                            else:
+                                # Inicializar las columnas si no existen datos previos
+                                for col in columnas_horas:
+                                    df_nuevo[col] = ""
+
+                            # Guardar en session_state
+                            st.session_state['df_horarios_reales'] = df_nuevo
                             
-                            st.success("Optimización completada con éxito. Vea los resultados en la siguiente pestaña")
+                            st.success("Optimización completada con éxito.")
                         #else:
                            # st.error("El modelo de optimización no encontró una solución válida.")
                     except Exception as e:
@@ -753,7 +790,7 @@ with tab3:
                     filtered_data = filtered_data[filtered_data['Planta_salida'] == planta_seleccionada]
 
             # Graficar el cronograma correcto según el estado
-            st.subheader("Cronograma de Camiones")
+            st.subheader("Cronograma de Secuenciamiento de Camiones")
             if st.session_state['cronograma_actualizado']:
                 col1,col2 = st.columns([6,0.5])
                 with col1:
@@ -774,25 +811,30 @@ with tab3:
             col1, col2 = st.columns([1.5, 2])  
             with col1:
                 st.subheader("Asignación de mixers y conductores")
-                # Solo inicializar si hay datos
-                if 'MIXERS' in st.session_state and 'CONDUCTORES' in st.session_state:
-                    N = 21  # o el número de camiones que quieras mostrar
-                    df_mixer = pd.DataFrame({
-                        "Camion_ID": list(range(N)),
-                        "MIXER": [""] * N,
-                        "CONDUCTOR": [""] * N
-                    })
+                #Opciones par tabla mixer-conductor
+                N = 21
+                if mixer_df is not None:
+                    MIXERS = mixer_df['MIXER'].unique().tolist()
+                if conductores_df is not None:
+                    CONDUCTORES = conductores_df['CONDUCTOR'].tolist()
+                # Crear DataFrame con el número de camiones seleccionado
+                df_mixer = pd.DataFrame({
+                    "Camion_ID": list(range(N)),  # ID de camión consecutivo
+                    "MIXER": [""] * N,  # Valor por defecto en MIXER
+                    "CONDUCTOR": [""] * N  # Valor por defecto en CONDUCTOR
+                })
 
-                    edited_df_mixer = st.data_editor(
-                        df_mixer,
-                        column_config={
-                            "MIXER": st.column_config.SelectboxColumn("MIXER", options=st.session_state.get('MIXERS', [])),
-                            "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=st.session_state.get('CONDUCTORES', []))
-                        },
-                        use_container_width=True
-                    )
+                # Usar st.data_editor para edición interactiva
+                edited_df_mixer = st.data_editor(
+                    df_mixer,
+                    column_config={
+                        "MIXER": st.column_config.SelectboxColumn("MIXER", options=MIXERS),
+                        "CONDUCTOR": st.column_config.SelectboxColumn("CONDUCTOR", options=CONDUCTORES)
+                    },
+                    use_container_width=True
+                )
 
-                    df_mixer.update(edited_df_mixer)
+                df_mixer.update(edited_df_mixer)
 
                 # Verificar duplicados (ignorando valores vacíos)
                 mixers_validos = df_mixer["MIXER"].replace("", None).dropna()
@@ -857,15 +899,13 @@ with tab3:
             with col2: 
                 # Calcular la tabla de camiones
                 filtered_data1 = f.formato_h_m(filtered_data1)
-                tabla_camiones = f.generar_tabla_camiones(filtered_data1)
-                st.markdown("""
-                    <h3 style='font-size:20px; text-align: center;'>Estado de Camiones por Hora</h3>
-                """, unsafe_allow_html=True)
-
-                # Graficar el estado de camiones
-                f.graficar_transito(tabla_camiones)
-        
-            #filtered_data = f.convertir_horas_datetime(filtered_data,primera_fecha)
+                if not filtered_data1.empty and 'Turno' in filtered_data1.columns:
+                    tabla_camiones = f.generar_tabla_camiones(filtered_data1)
+                    st.markdown("""<h3 style='font-size:20px; text-align: center;'>Estado de Camiones por Hora</h3>""", unsafe_allow_html=True)
+                    f.graficar_transito(tabla_camiones)
+                else:
+                    st.warning("No hay datos suficientes para generar este grafico.")
+                            #filtered_data = f.convertir_horas_datetime(filtered_data,primera_fecha)
 
             col1,col2,col3 = st.columns([1, 1,1])
             with col1: 
@@ -905,24 +945,7 @@ with tab3:
 
 
             st.dataframe(filtered_data[columnas_mostrar])
-            # Botón para descargar filtered_data como Excel
-            def to_excel(df):
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False, sheet_name='Planificacion')
-                return output.getvalue()
 
-            excel_data = to_excel(filtered_data)
-
-            st.download_button(
-                label="⬇️ Descargar resultados de la planificación",
-                data=excel_data,
-                file_name="planificacion.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                
-
-# ---------- SUBTAB 2: Ingreso de horarios reales ----------
         with subtab2:
             st.subheader("Ingreso de Horarios Reales")
 
@@ -936,97 +959,53 @@ with tab3:
             else:
                 df_horarios_reales = st.session_state['df_horarios_reales']
 
-            if st.session_state['cronograma_actualizado'] and 'df_horarios_reales' in st.session_state:
+            if st.session_state['cronograma_actualizado'] == True and 'df_horarios_reales' in st.session_state:
+                # Mostrar el DataFrame editable
                 col_mostrar = [
-                    "Pedido_ID", "Viaje_ID", 'Camion_ID', "MIXER", "CONDUCTOR", "Empresa", "Codigo_producto",
-                    "Hora_carga", "Hora_llegada_obra_var", "Hora_retorno",
-                    "Hora_Carga_R", "Hora_Llegada_Planta_R", "Hora_Retorno_R",
-                    "Volumen_confirmado", "Punto_entrega", "Destino_final", "Prioridad"
-                ]
-
+                        "Pedido_ID","Viaje_ID",'Camion_ID', "MIXER", "CONDUCTOR", "Empresa", "Codigo_producto",
+                        "Hora_carga", "Hora_llegada_obra_var", "Hora_retorno", "Hora_Carga_R","Hora_Llegada_Planta_R", "Hora_Retorno_R"
+                        ,"Volumen_confirmado", "Punto_entrega", "Destino_final", "Prioridad"
+                    ]
                 st.info('Deslize la tabla hacia la derecha para completar los campos de horarios reales y confirme con el botón **Guardar cambios**')
 
                 df_editado = st.data_editor(
                     df_horarios_reales[col_mostrar],
-                    use_container_width=True
-                )
+                    use_container_width=True)
 
-                # Validación opcional: asegurarse que tenga formato HH:MM
-                def validar_hora(hora_str):
-                    try:
-                        pd.to_datetime(hora_str, format='%H:%M')
-                        return True
-                    except:
-                        return False
-                errores = []
-                for col in ['Hora_Carga_R', 'Hora_Llegada_Planta_R', 'Hora_Retorno_R']:
-                    errores += df_editado[~df_editado[col].apply(validar_hora)][col].index.tolist()
-
-                if errores:
-                    st.warning("Algunas celdas de ingreso de horas tienen formato inválido. Use HH:MM (por ejemplo, 14:30).")
-                    st.stop()
-
+                # Guardar cambios al actualizar
                 if st.button("Guardar cambios"):
                     st.session_state['df_horarios_reales'].update(df_editado)
-                    st.session_state["actualizar_kpis"] = True
                     st.success("Horarios reales actualizados ✅")
-                    st.info("En la siguiente subpestaña encontrará sus métricas de desempeño 📈")
+                    st.info("En la siguiente subpestaña encontrara sus metricas de desempeño📈")
 
-                # Función para exportar a Excel
                 def to_excel(df):
                     df = df.drop_duplicates()
                     output = BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         df.to_excel(writer, index=False, sheet_name='Hoja1')
                     return output.getvalue()
-
-                if 'df_horarios_reales' in st.session_state:
+                        
+                if 'df_horarios_reales' in st.session_state: 
                     excel_data = to_excel(st.session_state['df_horarios_reales'])
                     st.download_button(
-                        label="Descargar en Excel",
+                        label="Descargar en excel",
                         data=excel_data,
                         file_name="resultadoss.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            else:
+                    ) 
+            else: 
                 st.info("No hay datos disponibles de los Mixer y Conductores. Complete el proceso en la subpestaña anterior.")
 
 
-
-        # ---------- SUBTAB 3: KPIs Planificado vs Ejecutado ----------
+        # Agregar los KPIs en la subpestaña
         with subtab3:
             st.subheader("📊 Panel de Análisis: Planificado VS Ejecutado")
-
-            # Condición para cargar métricas
-            if st.session_state.get('cronograma_actualizado') and 'df_horarios_reales' in st.session_state:
-                if st.session_state.get("actualizar_kpis", False):
-                    st.success("KPIs actualizados con los últimos horarios reales ✅")
-                    st.session_state["actualizar_kpis"] = False  # Resetear bandera
-
+            if st.session_state['cronograma_actualizado'] == True and 'df_horarios_reales' in st.session_state:
                 f.mostrar_kpis(st.session_state['df_horarios_reales'])
                 f.graficar_cronograma_comparacion(st.session_state['df_horarios_reales'])
                 f.mostrar_kpis_individuales(st.session_state['df_horarios_reales'])
-
-                # Instrucción para imprimir/guardar en PDF
-                st.markdown(
-                    """
-                    <hr style="margin-top: 25px; margin-bottom: 10px;">
-                    <div style="font-size: 14px; color: #555;">
-                        🖨️ <strong>¿Quiere guardar los resultados?</strong><br>
-                        Puede imprimir esta pantalla o guardarla como PDF presionando:
-                        <ul>
-                            <li><strong>Ctrl + P</strong> (en Windows o Linux)</li>
-                            <li><strong>Cmd + P</strong> (en Mac)</li>
-                        </ul>
-                        Luego seleccione <strong>"Guardar como PDF"</strong> como impresora 📄.
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
             else:
                 st.info("No hay datos disponibles. Complete el proceso en la subpestaña anterior.")
-
-
 
     else:
             st.info("No hay datos disponibles. Complete el proceso en la pestaña anterior.")
@@ -1036,7 +1015,6 @@ with tab3:
 with tab4:
     st.header("🎯 Optimización de Planificación")
     if planif_semanal is not None:
-
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
@@ -1058,7 +1036,6 @@ with tab4:
                 (planif_semanal['Fecha'].dt.date == fecha_seleccionada)
                 & (planif_semanal['Turno'] == turno_seleccionado)
             ]
-
             col1, col2, col3 = st.columns(3)
             with col1:
                 PP = st.number_input("Número de plantas disponibles:", min_value=1, value=2, step=1, key="PP")
@@ -1077,13 +1054,11 @@ with tab4:
                         resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
                             file_path=".",
                             file_name="temp_planificacion.xlsx",
-                            df_tiempos= tiempos_aux,
-                            df_familia= productos_aux,
-                            df_prioridad= prioridades_aux,
                             fechas=[fecha_seleccionada],
                             turnos=[turno_seleccionado],
                             plants=PP,
-                            time=T
+                            time=T,
+                            df_tiempos=tiempos_aux
                         )
                         st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
