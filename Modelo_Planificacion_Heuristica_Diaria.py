@@ -534,33 +534,30 @@ def optimizar_secuenciamiento_camiones_ortools(df_resultado, tiempo_actual_str, 
         model_h.Add(C_t[i] == C[i] + ru[i] - rl[i])
 
     for i in nodos:
-        # **Cotas para ru[i] y rl[i] según prioridad**
-        if Prioridad[i] == 'ALTA':  # Si la prioridad es ALTA, fijar ru[i] y rl[i] a 0
+        if Prioridad[i] == 'ALTA':
             model_h.Add(ru[i] == 0)
             model_h.Add(rl[i] == 0)
-        elif Prioridad[i] == 'MEDIA':  # Si la prioridad es MEDIA, limitar ru[i] y rl[i] a 20
+        elif Prioridad[i] == 'MEDIA':
             model_h.Add(ru[i] <= 20)
             model_h.Add(rl[i] <= 45)
 
         if not np.isnan(C_t_old[i]) and C_t_old[i] <= tiempo_actual + 45:
-            model_h.Add(C_t[i] == C_t_old[i])  # Fijar C_t[i] al valor anterior
-            if not np.isnan(k_old[i]):  
-                model_h.Add(x[i, int(k_old[i])] == 1)  # Fijar camión al viaje
+            model_h.Add(C_t[i] == C_t_old[i])
+            model_h.Add(x[i, int(k_old[i])] == 1)
 
-        # Congelar hora de retorno si fue ingresada
         if R[i] > 0:
-            model_h.Add(phi[i] == R[i])  # Fijar hora de retorno proyectada
+            model_h.Add(phi[i] == R[i])
             if not np.isnan(k_old[i]):
-                model_h.Add(x[i, int(k_old[i])] == 1)  # Fijar camión asociado
-            b[i] = 1  # Desactivar restricción de phi[i]
-    # No explorar nodos pasados
+                model_h.Add(x[i, int(k_old[i])] == 1)
+            b[i] = 1
+
     C_t[i] >= tiempo_actual + 45
 
-    # Def Phi[i]
+    # Def Phi[i] con variable auxiliar
     for i in nodos:
         model_h.Add(phi[i] >= C_t[i] + p[i] + ti0[i] - M * b[i])
 
-    # Restricción: C_t[i] - t0i[i] >= 0
+    # Restricción de no salir antes del tiempo de llegada estimado
     for i in nodos:
         model_h.Add(C_t[i] - t0i[i] >= 0)
 

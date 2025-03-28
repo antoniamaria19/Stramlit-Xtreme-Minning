@@ -569,7 +569,7 @@ def ejecutar_proceso_planificacion(file_path, file_name, df_tiempos, df_familia,
     df_merged["INICIO CARGA"] = df_merged["INICIO CARGA"].dt.strftime('%H:%M')
     df_merged["LLEGADA OBRA"] = df_merged["LLEGADA OBRA"].dt.strftime('%H:%M')
     df_merged["RETORNO PLANTA"] = df_merged["RETORNO PLANTA"].dt.strftime('%H:%M')
-
+    
 # Función para optimizar la planificación semanal
 def optimizar_planificacion_semanal_gurobi(df_resultado, time_limit, plants, K = 20):
     """
