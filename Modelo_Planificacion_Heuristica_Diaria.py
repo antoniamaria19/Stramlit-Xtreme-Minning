@@ -142,13 +142,17 @@ def procesar_planificacion_inicial(df_std_pl, df_tiempos, df_familia, df_priorid
 
     #3. Prioridades 
     # Merge con la tabla de prioridades, asignando prioridad BAJA cuando no hay match
-    df_std_pl = df_std_pl.merge(
-        df_prioridad[['Empresa', 'Familia', 'Prioridad']],
-        on=['Empresa', 'Familia'],
-        how='left'
-    )
-    df_std_pl['Prioridad'] = df_std_pl['Prioridad'].fillna('BAJA')
-    
+    # 3. Prioridades 
+    if isinstance(df_prioridad, pd.DataFrame) and {'Empresa', 'Familia', 'Prioridad'}.issubset(df_prioridad.columns):
+        df_std_pl = df_std_pl.merge(
+            df_prioridad[['Empresa', 'Familia', 'Prioridad']],
+            on=['Empresa', 'Familia'],
+            how='left'
+        )
+        df_std_pl['Prioridad'] = df_std_pl['Prioridad'].fillna('BAJA')
+    else:
+        #st.warning("La tabla de prioridades está vacía o mal estructurada. Se asignará prioridad 'BAJA' a todos los registros.")
+        df_std_pl['Prioridad'] = 'BAJA'
     # Añadir columnas con tiempos de pre y post descarga
     df_std_pl['Tiempo_pre_descarga'] = df_std_pl['Llegada_obra_min']
     df_std_pl['Tiempo_post_descarga'] = df_std_pl['Atencion_min'] + df_std_pl['Retorno_min'] + df_std_pl['Lavado_min']
