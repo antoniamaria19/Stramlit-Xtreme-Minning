@@ -355,6 +355,7 @@ with tab2:
                 (planif_semanal['Fecha'].dt.date == fecha_seleccionada)
                 & (planif_semanal['Turno'] == turno_seleccionado)
             ]
+            data_filtro_fecha_turno = data_filtro_fecha_turno.dropna(how="all")  # Eliminar filas completamente vacías
 
             # Mostrar tarjeta con fecha y turno
             primera_fecha = data_filtro_fecha_turno['Fecha'].dt.strftime('%d-%m').iloc[0]
