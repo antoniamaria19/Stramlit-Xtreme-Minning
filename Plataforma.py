@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -472,6 +473,7 @@ with tab2:
 
             # Obtener el rango de filas desde len(planif_diaria) hasta len(edited_df)
             pedidos_nuevos = edited_df.iloc[len(planif_diaria):len(edited_df)]
+            pedidos_nuevos = pedidos_nuevos.dropna(subset=['Hora_requerida'])
 
             # Mostrar el "pedazo" extraído
             pedidos_nuevos_procesados = HD.procesar_tabla_editada(pedidos_nuevos)
@@ -1051,14 +1053,17 @@ with tab4:
                 if st.button("Ejecutar Optimización"):
                     try:
                         # Ejecutar la planificación y obtener el resultado
+                        # Ejecutar la planificación y obtener el resultado
                         resultado, time2, referencia_fecha = mps.ejecutar_proceso_planificacion(
                             file_path=".",
                             file_name="temp_planificacion.xlsx",
+                            df_tiempos= tiempos_aux,
+                            df_familia= productos_aux,
+                            df_prioridad= prioridades_aux,
                             fechas=[fecha_seleccionada],
                             turnos=[turno_seleccionado],
                             plants=PP,
-                            time=T,
-                            df_tiempos=tiempos_aux
+                            time=T
                         )
                         st.metric(label="Tiempo de resolución (segundos)", value=round(time2, 2))
 
