@@ -333,7 +333,9 @@ with tab2:
         # Filtros en dos columnas
         col1, col2 = st.columns(2)
         with col1:
-            fechas_ordenadas = sorted(planif_semanal['Fecha'].dt.date.unique())
+            fechas_ordenadas = sorted(
+                    planif_semanal['Fecha'].dropna().dt.date.unique()
+            )
             fecha_seleccionada = st.selectbox(
                 "Seleccione una fecha",
                 fechas_ordenadas,
