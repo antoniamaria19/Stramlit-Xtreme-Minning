@@ -426,6 +426,8 @@ with tab2:
 
             # Filtrar solo las columnas relevantes
             editable_df = planif_diaria[editable_columns]
+            editable_df = editable_df.copy()
+            editable_df = editable_df.fillna("").replace([np.inf, -np.inf], "")
             editable_df = editable_df.dropna(how="all")  # Eliminar filas completamente vacías
 
 
