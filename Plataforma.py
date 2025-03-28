@@ -423,7 +423,7 @@ with tab2:
 
             # Filtrar solo las columnas relevantes
             editable_df = planif_diaria[editable_columns]
-            editable_df = editable_df.copy()  # Crear una copia independiente antes de modificarla
+            editable_df = editable_df.dropna(how="all")  # Eliminar filas completamente vacías
 
 
             # Verificar si la columna 'Fecha' ya está en el formato '%d-%m-%Y'
@@ -442,6 +442,7 @@ with tab2:
 
             # Eliminar filas duplicadas basado en todas las columnas relevantes
             editable_df = editable_df.drop_duplicates()
+        
         
             # Crear editor interactivo con opciones desplegables
             st.subheader("Confirmación de pedidos")
