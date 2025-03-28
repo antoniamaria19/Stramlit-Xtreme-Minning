@@ -435,20 +435,13 @@ with tab2:
                 editable_df['Fecha'] = pd.to_datetime(editable_df['Fecha'], errors='coerce').dt.strftime('%d-%m-%Y')
 
             
-            # Función utilitaria segura para evitar errores con NaN o columnas faltantes
-            def valores_unicos_seguro(df, columna):
-                if columna in df.columns:
-                    return df[columna].dropna().unique().tolist()
-                else:
-                    return []
-
-            # Listas de info para tabla con campos desplegables
-            empresas = list(set(valores_unicos_seguro(data_aux, 'Empresas') + valores_unicos_seguro(planif_diaria, 'Empresa')))
-            codigos_producto = valores_unicos_seguro(data_aux, 'Codigos')
-            obras = list(set(valores_unicos_seguro(data_aux, 'Obras') + valores_unicos_seguro(planif_diaria, 'Obra')))
-            usos = list(set(valores_unicos_seguro(data_aux, 'Usos') + valores_unicos_seguro(planif_diaria, 'Uso')))
-            fecha = valores_unicos_seguro(planif_diaria, 'Fecha')
-            turno = valores_unicos_seguro(planif_diaria, 'Turno')
+            #listas de info para tabla con campos despegables 
+            empresas = list(set(data_aux['Empresas'].unique().tolist() + planif_diaria['Empresa'].unique().tolist()))
+            codigos_producto = data_aux['Codigos'].unique().tolist() 
+            obras = list(set(data_aux['Obras'].unique().tolist() + planif_diaria['Obra'].unique().tolist()))
+            usos = list(set(data_aux['Usos'].unique().tolist() + planif_diaria['Uso'].unique().tolist()))
+            fecha = planif_diaria['Fecha'].unique().tolist()
+            turno = planif_diaria['Turno'].unique().tolist()
 
             # Eliminar filas duplicadas basado en todas las columnas relevantes
             editable_df = editable_df.drop_duplicates()
