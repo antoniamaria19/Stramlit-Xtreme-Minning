@@ -98,13 +98,19 @@ def procesar_planificacion_inicial(df_std_pl, df_tiempos, df_familia, df_priorid
     #MERGE CON TABLAS AUXILIARES
     #1. Tiempos
     # Realizar el merge con la tabla auxiliar para obtener tiempos específicos
-    df_std_pl = df_std_pl.merge(
-        df_tiempos[['Empresa', 'Punto_entrega', 'Llegada_obra_min', 'Atencion_min', 'Retorno_min', 'Lavado_min', 'Total_vuelta_min']],
-        on=['Empresa', 'Punto_entrega'],
-        how='left',
-        suffixes=('', '_ref')
-    )
-    
+    # Verificamos si df_tiempos tiene columnas requeridas
+    tiempos_cols = ['Empresa', 'Punto_entrega', 'Llegada_obra_min', 'Atencion_min', 'Retorno_min', 'Lavado_min', 'Total_vuelta_min']
+    if all(col in df_tiempos.columns for col in tiempos_cols):
+        df_std_pl = df_std_pl.merge(
+            df_tiempos[tiempos_cols],
+            on=['Empresa', 'Punto_entrega'],
+            how='left',
+            suffixes=('', '_ref')
+        )
+    else:
+        # Si no existen, crear columnas vacías para simular el merge y que combine_first funcione
+        for col in ['Llegada_obra_min_ref', 'Atencion_min_ref', 'Retorno_min_ref', 'Lavado_min_ref', 'Total_vuelta_min_ref']:
+            df_std_pl[col] = np.nan
     # Crear series de valores por defecto del mismo tamaño que el DataFrame
     default_llegada_obra = pd.Series(63, index=df_std_pl.index)
     default_atencion_min = pd.Series(33, index=df_std_pl.index)
