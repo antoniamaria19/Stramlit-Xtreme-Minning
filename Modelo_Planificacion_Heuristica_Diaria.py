@@ -59,6 +59,7 @@ def procesar_planificacion_inicial(df_std_pl, df_tiempos, df_familia, df_priorid
     #df_std_pl = pd.read_excel(archivo_completo, sheet_name='BD_Programa')
      # Asegurarte de trabajar con una copia para evitar SettingWithCopyWarning
     df_std_pl = df_std_pl.copy()
+    df_std_pl = df_std_pl.dropna(how='all')
 
     # Convertir 'Turno' a string para asegurar consistencia de tipos
     df_std_pl['Turno'] = df_std_pl['Turno'].astype(str)  # Convertir columna 'Turno' a string
@@ -134,8 +135,11 @@ def procesar_planificacion_inicial(df_std_pl, df_tiempos, df_familia, df_priorid
     
     #2. Familia de producto 
     # Merge con la tabla de productos para obtener la familia
-    df_std_pl = df_std_pl.merge(df_familia[['Codigo_producto', 'Familia']], on='Codigo_producto', how='left')
-    
+    if isinstance(df_familia, pd.DataFrame) and {'Codigo_producto', 'Familia'}.issubset(df_familia.columns):
+        df_std_pl = df_std_pl.merge(df_familia[['Codigo_producto', 'Familia']], on='Codigo_producto', how='left')
+    else:
+        df_std_pl['Familia'] = 'Sin asignar'
+
     #3. Prioridades 
     # Merge con la tabla de prioridades, asignando prioridad BAJA cuando no hay match
     df_std_pl = df_std_pl.merge(
